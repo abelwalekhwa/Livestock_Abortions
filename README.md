@@ -59,16 +59,23 @@ Data Curation
 1.	Environmental conditions
 
 A	Bushes, Recent rainfall (less than 14 days), Heavy forests, Stagnant water
+
 B	Only 03 present; Bushes, Stagnant water, Heavy forests
+
 C	Only two present; Bushes, Recent rainfall (less than 14 days)
+
 D	Only one present
 
 2.	Clinical presentations
 
-W	Up to 4 and above presentations: Sudden onset of abortion among pregnant animals Weakness /Unsteady gait   Mucopurulent nasal discharge  Profuse fetid diarrhoea   High fever  
-X	Up to 3 presentations
-Y	Up to 2 presentations
-Z	Up to 1 presentation
+W: Up to 4 and above presentations: Sudden onset of abortion among pregnant animals Weakness /Unsteady gait   Mucopurulent nasal discharge  Profuse fetid diarrhoea   High fever  
+
+
+X: Up to 3 presentations
+
+Y: Up to 2 presentations
+
+Z: Up to 1 presentation
 
 
 
