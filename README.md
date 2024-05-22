@@ -14,7 +14,39 @@ Dataset I: Abortions_all_03102023.xlsx
 
 Description
 
-This is the main dataset which we used for analysis in RStudio using Markdown. This dataset had the following variables; Unique ID (This was assigned in transporting the samples from the field). rvfelisa_IgM (This is the results for serological analysis for IgM for RVF). Meanod_IgM (this means the average output of laboratory OD after running IgM twice). We ran twice as part of quality control and quality assurance in the laboratory. rvfelisa_IgG (This is the results for serological analysis for IgG for RVF). Meanod_IgG (this means the average output of laboratory OD after running IgG twice). Host_rvf (This means the different animal species where samples were picked). Brucelliosis (This is the IgG serological results for brucellosis from different hosts). Host_brucellosis (this means the animals where the samples were picked from to analyse for brucellosis). The parameters of gender, age, education, household_size, subcounty, parish, village were all from the person who was reporting the abortion alerts. Village is the smallest administrative unit followed by parish and subcounty. So, you are tracing the actual location of the animal/farms where abortions were occurring, you could use village. Date_alert (This means the actual date when a phone call was made to the call centre). Date_investigation (This means the date when the investigation team left the call centre to the farm to follow-up on the reported abortions cases). Date_samplecollection (This means the date when sera was picked from the animals from different farms). Animalclinical_presentation (This means clinical presentation at farm level as observed by the investigation team). The details of W,X,Y,Z has been detailed under data curation. Stage_pregnancy (This means the gestation period for the animal before the abortion occurred). Herd_size (This means the number of animals found at the farm at the time of investigation). Rvf_vaccination_status (This means the status of vaccination for different animals as reported by the farmer/animal owner). Environmental_features (This means the environmental conditions that were identified by investigation team at farm level). The details of A, B,C,D has been described under data curation. History_animal_movement (This means the possibility of a new animal introduced in the farm or local setting as reported by the farmer). 
+This is the main dataset which we used for analysis in RStudio using Markdown. This dataset had the following variables; 
+
+Unique ID (This was assigned in transporting the samples from the field). 
+
+rvfelisa_IgM (This is the results for serological analysis for IgM for RVF). 
+
+Meanod_IgM (this means the average output of laboratory OD after running IgM twice). We ran twice as part of quality control and quality assurance in the laboratory. 
+
+rvfelisa_IgG (This is the results for serological analysis for IgG for RVF). 
+
+Meanod_IgG (this means the average output of laboratory OD after running IgG twice). 
+
+Host_rvf (This means the different animal species where samples were picked). 
+
+Brucelliosis (This is the IgG serological results for brucellosis from different hosts). 
+
+Host_brucellosis (this means the animals where the samples were picked from to analyse for brucellosis). 
+
+The parameters of gender, age, education, household_size, subcounty, parish, village were all from the person who was reporting the abortion alerts. Village is the smallest administrative unit followed by parish and subcounty. So, you are tracing the actual location of the animal/farms where abortions were occurring, you could use village. 
+
+Date_alert (This means the actual date when a phone call was made to the call centre). 
+
+Date_investigation (This means the date when the investigation team left the call centre to the farm to follow-up on the reported abortions cases). 
+
+Date_samplecollection (This means the date when sera was picked from the animals from different farms). 
+
+Animalclinical_presentation (This means clinical presentation at farm level as observed by the investigation team). The details of W,X,Y,Z has been detailed under data curation. Stage_pregnancy (This means the gestation period for the animal before the abortion occurred). 
+
+Herd_size (This means the number of animals found at the farm at the time of investigation). Rvf_vaccination_status (This means the status of vaccination for different animals as reported by the farmer/animal owner). 
+
+Environmental_features (This means the environmental conditions that were identified by investigation team at farm level). The details of A, B,C,D has been described under data curation. 
+
+History_animal_movement (This means the possibility of a new animal introduced in the farm or local setting as reported by the farmer). 
 
 Dataset II: uga_admbnda_adm2_ubos_20200824.shp	
 
