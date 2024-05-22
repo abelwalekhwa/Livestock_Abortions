@@ -12,32 +12,13 @@ knitr::opts_chunk$set(echo = TRUE)
 # 04th October 2023
 #Reading the file document
 library(readxl)
-Abortions_all_03102023 <- read_excel("~/Documents/R/Reporting of livestock abortions/Abortions_all_03102023.xlsx")
+Abortions_all_03102023 <- read_excel("~/OneDrive - University of Cambridge/R/Reporting of livestock abortions/Abortions reporting/Abortions_all_03102023.xlsx")
 View(Abortions_all_03102023)
+
 ```
 ```{r}
 ## Loading packages
-pacman::p_load(sf,tidyterra,dplyr)
-library(tidyverse)
-library(arsenal)
-library(ggplot2)
-library(lubridate)
-library(broom)
-library(data.table)
-library(here)
-library(rio)
-library(tidyverse)
-library(linelist)
-library(janitor)
-library(knitr)
-library(finalfit)
-library(forestmodel)
-library(kableExtra)
-library(skimr)
-library(DescTools)
-library(lmtest)
-library("epitools")
-
+pacman::p_load(sf,tidyterra,dplyr,tidyverse,arsenal,ggplot2,lubridate,broom,data.table,here,rio,linelist,janitor,knitr,finalfit,forestmodel,kableExtra,skimr,DescTools,lmtest,"epitools")
 ```
 ```{r}
 ## Univariate analysis
@@ -75,6 +56,12 @@ install.packages("arsenal")
 library(arsenal)
 Abortion2 <- tableby(rvfelisa_IgM ~ host_rvf + subcounty + rvf_vaccination_status + stage_pregnancy + environmental_features + history_animal_movement, data = Abortions_all_03102023)
 summary(Abortion2, text = TRUE)
+
+##Drawing a table to factor in different dates of reporting abortions (17.05.2024)
+library(arsenal)
+Abortion2 <- tableby(date_alert_new ~ host_rvf + subcounty + stage_pregnancy + environmental_features + history_animal_movement, data = Abortions_all_03102023) 
+summary(Abortion2, text = TRUE)
+
 
 ## Ploting for the results: 25th October 2023
 IgG_bivariate <- tableby(rvfelisa_IgG ~ host_rvf, data = Abortions_all_03102023)
@@ -116,6 +103,7 @@ print(disease_table)
 #9th October 2023, 2nd February 2024
 # Multivariate analysis
 library(dplyr)
+
 log_analysis <- Abortions_all_03102023 %>%
   select(date_alert,rvfelisa_IgG) %>% 
   na.omit() %>% 
@@ -134,16 +122,50 @@ sapply(lapply(Abortions_all_03102023, unique), length)
 #fiting the positives to be 1 and negatives to be 0
 Abortions_all_03102023$rvfelisa_IgG_bin <- ifelse(Abortions_all_03102023$rvfelisa_IgG == "Positive", 1, 0)
 # fiting the logistic regression model
+
+Abortions_all_03102023 <- Abortions_all_03102023 %>% mutate(host_rvf = factor(host_rvf,levels=c('Goats','Cattle','Sheep')))
+
 Abortion4 <- glm(rvfelisa_IgG_bin ~ host_rvf + stage_pregnancy + environmental_features + history_animal_movement, family = binomial, data = Abortions_all_03102023)
 summary(Abortion4)
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-##Simplifying the tables in R and making the model outputs into a publishable version
+
+## Separating the date_alert (14 days window)
+
+Abortions_all_03102023$date_alert <- as_datetime(Abortions_all_03102023$date_alert)
+
+cutoff_date <- ymd("2023-02-14") ## 14 days before the set up of call centre (1st March 2023)
+
+before_cutoff <- Abortions_all_03102023 %>% filter(date_alert < cutoff_date) ## Abortions earlier
+
+after_cutoff <- Abortions_all_03102023 %>% filter(date_alert >= cutoff_date) ## Abortions in the window period
+
+number_before <- nrow(before_cutoff)
+
+
+number_after <- nrow(after_cutoff)
+
+##Creating a new column in the dataset date_alert_new
+cutoff_date <- ymd("2023-02-14")
+Abortions_all_03102023 <- Abortions_all_03102023 %>%
+  mutate(date_alert_new = if_else(date_alert < cutoff_date, "Before 14th Feb 2023", "15th Feb 2023 Onwards"))
+
+## Getting a new dataset without Before 14th Feb 2023 data
+
+updated_Abortions_all_03102023 <- Abortions_all_03102023 %>%
+  filter(date_alert_new != "Before 14th Feb 2023")
+
+##Re-running the model just to see in case of any difference
+
+Abortion5 <- glm(rvfelisa_IgG_bin ~ host_rvf + stage_pregnancy + environmental_features + history_animal_movement, family = binomial, data = updated_Abortions_all_03102023)
+
+summary(Abortion5)
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+##Simplifying the tables in R and making the model outputs into a publishable version/Not liked by James
 install.packages("gtsummary")
 library(gtsummary)
 Abortion4  %>% 
 tbl_regression(exponentiate = TRUE) %>% 
 bold_p()
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 ```{r}
 ```
 ```{r}
@@ -262,14 +284,13 @@ print(average_difference)
 # Plotting the differences
 library(ggplot2)
 ggplot(Abortions_all_03102023, aes(x = days_difference)) +
-  geom_histogram(binwidth=1, fill="steelblue", color="black", alpha=0.7) +
-  labs(title = "Distribution of Days Difference between Alert and Sample Collection",
-       x = "Days Difference",
-       y = "Count") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-
+    geom_histogram(binwidth=1, fill="#FF8000", color="black", alpha=0.7) +
+    labs(title = "Distribution of Days Difference between Alert and Sample Collection",
+         x = "Duration to respond to abortion alerts",
+         y = "Number of abortions followed up") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    coord_cartesian(xlim = c(0, 15))  
 ```
 ```{r}
 # Further analysis with Dr Andrew Conlan (17th October 2023)
@@ -502,7 +523,8 @@ library(scales)
 library(lubridate)
 
 # Loading the data
-df <- read_excel("~/Documents/R/Reporting of livestock abortions/Abortions_all_03102023.xlsx")
+df <- read_excel("~/OneDrive - University of Cambridge/R/Reporting of livestock abortions/Abortions reporting/Abortions_reporting_02102023.xlsx")
+View(Abortions_reporting_02102023)
 
 # Converting 'date_alert' to Date type (if it's not already)
 df$date_alert <- as.Date(df$date_alert)
@@ -531,8 +553,10 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 
-# Loading the data
-df <- read_excel("~/Documents/R/Reporting of livestock abortions/Abortions_all_03102023.xlsx")
+
+library(readxl)
+df<- read_excel("~/OneDrive - University of Cambridge/R/Reporting of livestock abortions/Abortions reporting/Abortions_all_03102023.xlsx")
+
 
 # Convert 'date_alert' to Date type (if it's not already)
 df$date_alert <- as.Date(df$date_alert)
@@ -545,16 +569,17 @@ df <- df %>%
 # Plotting the Time series for Reported Abortions
 library(ggplot2)
 library(scales)  # Make sure to load the 'scales' library for date formatting
+library(RColorBrewer)
 
 ggplot(df, aes(x = month_year, fill = rvfelisa_IgG)) +
   geom_histogram(stat = "count", position = "stack", binwidth = 30) +
-  scale_fill_manual(values = c("Positive" = "red", "Negative" = "green")) +
+  scale_fill_manual(values = c("Positive" = "#e8400c", "Negative" = "#0971b2")) +
   scale_x_date(labels = date_format("%b %Y"), date_breaks = "1 month") +  # Corrected date formatting
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5, face = "bold")) +
   labs(x = "Date (Month/Year)", y = "Number of reported abortions", title = "Time series for Reported Abortions") +
   guides(fill = guide_legend(title = "RVF ELISA IgG"))
-
 ```
 ```{r}
 ## Shape files for Isingiro District
