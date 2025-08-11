@@ -1,6 +1,6 @@
 ![image](https://github.com/user-attachments/assets/30f0f9f1-75d8-4fcd-bec6-5768c3867a1b)Supplementary Information
 
-The manuscript submitted to PLOS ONE, which is entitled "Exploring community-based reporting of livestock abortions for Rift Valley Fever disease surveillance in Uganda: A pilot study"
+The manuscript submitted to Scientific Reports Journal, which is entitled "Exploring community-based reporting of livestock abortions for Rift Valley Fever disease surveillance in Uganda: A pilot study"
 
 The authors are:  Abel Wilson Wilson Walekhwa; Andrew JK Conlan; Stella Acaye Atim; Anna Rose Ademun; Emmanuel Hasahya; James L.N. Wood; Lawrence Mugisha
 The corresponding author for the submission process is: Mr Abel Wilson Walekhwa, wabelwilson@gmail.com
