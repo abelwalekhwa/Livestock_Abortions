@@ -13,7 +13,7 @@ Key message:
 •	The feasibility of implementing a community-based livestock abortions surveillance programme from farms to the centralized district call centre in Isingiro district, Uganda.
 •	Mixed infection of animals having livestock abortions (RVF and brucellosis)
 
-Dataset I: Abortions_all_03102023.xlsx
+Dataset I: Abortions_all_11108025.xlsx
 
 Description
 
