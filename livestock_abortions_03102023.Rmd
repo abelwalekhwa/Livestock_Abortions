@@ -1,0 +1,358 @@
+---
+title: "Livestock abortions reporting"
+author: "Abel"
+date: "03 october 2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#########################################################################################
+#Reading the file document
+library(readxl)
+Abortions_all_03102023 <- read_excel("~/OneDrive - University of Cambridge/R/Reporting of livestock abortions/Abortions reporting/Abortions_all_03102023.xlsx")
+View(Abortions_all_03102023)
+##############################################################################
+
+## Loading required packages
+pacman::p_load(sf,tidyterra,dplyr,tidyverse,arsenal,ggplot2,lubridate,broom,data.table,here,rio,linelist,janitor,knitr,finalfit,forestmodel,kableExtra,skimr,DescTools,lmtest,"epitools")
+
+## Univariate analysis (Supplementary Table 1)
+table(Abortions_all_03102023$rvfelisa_IgM)
+table(Abortions_all_03102023$rvfelisa_IgG)
+table(Abortions_all_03102023$host_rvf)
+table(Abortions_all_03102023$host_brucellosis)
+table(Abortions_all_03102023$gender)
+table(Abortions_all_03102023$occupation)
+table(Abortions_all_03102023$education)
+table(Abortions_all_03102023$subcounty)
+table(Abortions_all_03102023$animalclinical_presentations)
+table(Abortions_all_03102023$stage_pregnancy)
+table(Abortions_all_03102023$environmental_features)
+table(Abortions_all_03102023$history_animal_movement)
+table(Abortions_all_03102023$rvf_vaccination_status)
+# Calculating the median and IQR for the household
+# Remove rows with missing values
+cleaned_data <- na.omit(Abortions_all_03102023$household_size)
+
+# Calculate the median of household_size from the cleaned vector
+median_value <- median(cleaned_data)
+
+# Calculate the IQR of household_size from the cleaned vector
+iqr_value <- IQR(cleaned_data)
+
+# Print the results
+cat("Median:", median_value, "\n")
+cat("IQR:", iqr_value, "\n")
+
+```
+
+```{r}
+#####################################################################################
+##Visualing for Table 1 in the manuscript
+install.packages("arsenal")
+library(arsenal)
+Abortion2 <- tableby(rvfelisa_IgM ~ host_rvf + subcounty + rvf_vaccination_status + stage_pregnancy + environmental_features + history_animal_movement, data = Abortions_all_03102023)
+summary(Abortion2, text = TRUE)
+
+##Drawing a table to factor in different dates of reporting abortions (17.05.2024) for visualization purposes
+library(arsenal)
+Abortion2 <- tableby(date_alert_new ~ host_rvf + subcounty + stage_pregnancy + environmental_features + history_animal_movement, data = Abortions_all_03102023) 
+summary(Abortion2, text = TRUE)
+
+
+## Ploting for the results: 25th October 2023
+IgG_bivariate <- tableby(rvfelisa_IgG ~ host_rvf, data = Abortions_all_03102023)
+summary(IgG_bivariate, text = TRUE)
+
+IgM_bivariate <- tableby(rvfelisa_IgM ~ host_rvf, data = Abortions_all_03102023)
+summary(IgM_bivariate, text = TRUE)
+
+#Ploting for brucellosis
+brucella <- tableby(brucellosis ~ host_brucellosis, data = Abortions_all_03102023)
+summary(brucella, text = TRUE)
+
+#Understanding hosts that suffered both brucellosis and RVF
+
+# Subset the data for hosts with both conditions
+hosts_with_both <- Abortions_all_03102023 %>%
+  filter(brucellosis == "Positive" & rvfelisa_IgG == "Positive")
+
+# Count how many of each host type have both conditions
+count_hosts <- table(hosts_with_both$host_rvf)
+
+# Print the results
+print(count_hosts)
+
+# Create a combined variable that indicates the presence of both diseases, one of them, or neither
+Abortions_all_03102023$both_diseases <- with(Abortions_all_03102023,
+                                             ifelse(brucellosis == "Positive" & rvfelisa_IgG == "Positive", "Both",
+                                                    ifelse(brucellosis == "Positive", "Only Brucellosis",
+                                                           ifelse(rvfelisa_IgG == "Positive", "Only RVF IgG", "Neither"))))
+
+# Create a contingency table
+disease_table <- table(Abortions_all_03102023$host_rvf, Abortions_all_03102023$both_diseases)
+
+# Print the results
+print(disease_table)
+
+```
+#Univariate analysis before choice of the variables in the final model
+```{r}
+library(broom)
+library(dplyr)
+
+# Define predictor variables for the univariate model for RVF
+
+predictors <- c("host_rvf", "stage_pregnancy", "environmental_features", 
+                "history_animal_movement", "number_rvf_vaccinated", 
+                "destination_animalmovement", "subcounty")
+
+# Initialize a list to store results
+univariate_results <- list()
+
+# Loop through each predictor to fit a univariate model and get standard errors and z-values
+for (predictor in predictors) {
+    # Fit the univariate model
+    formula <- as.formula(paste("rvfelisa_IgG_bin ~", predictor))
+    univ_model <- glm(formula, family = binomial, data = Abortions_all_03102023)
+    
+    univ_summary <- tidy(univ_model, conf.int = TRUE) %>%
+        select(term, estimate, std.error, statistic, p.value) %>%  # Select relevant columns
+        rename(z_value = statistic) %>%  # Renaming statistic to z_value
+        mutate(across(c(std.error, z_value, p.value), round, 3))  # Round to 3 decimal places
+    
+    univ_summary <- univ_summary %>%
+        mutate(Predictor = predictor)
+  
+    univariate_results[[predictor]] <- univ_summary
+}
+
+full_univariate_results <- bind_rows(univariate_results)
+
+full_univariate_results <- full_univariate_results %>%
+    select(Predictor, term, estimate, std.error, z_value, p.value)
+
+print(full_univariate_results, n = Inf)  # n = Inf ensures all rows are displayed
+
+options(max.print = 1000)  # Increasing the number of rows that can be printed
+
+# Formating the results to avoid scientific notation
+full_univariate_results <- full_univariate_results %>%
+    mutate(
+        estimate = format(estimate, nsmall = 3, scientific = FALSE),
+        std.error = format(std.error, nsmall = 3, scientific = FALSE),
+        z_value = format(z_value, nsmall = 3, scientific = FALSE),
+        p.value = format(p.value, nsmall = 3, scientific = FALSE)
+    )
+
+print(full_univariate_results, row.names = FALSE)
+
+```
+
+# Multivariate analysis for RVF
+```{r}
+#########################################################################################
+library(dplyr)
+log_analysis <- Abortions_all_03102023 %>%
+  select(date_alert,rvfelisa_IgG) %>% 
+  na.omit() %>% 
+  mutate(rvfelisa_IgG = if_else(rvfelisa_IgG == "Positive", 1, 0))
+logistic.display <- function(model) {
+cat("Coefficients:\n")
+print(m$coefficients[, 1:4, drop = FALSE])
+cat("\n")
+cat("Goodness of Fit:\n")
+print(c("Deviance = ", round(m$deviance, 3)))
+print(c("AIC = ", round(m$aic, 3)))
+print(c("BIC = ", round(m$bic, 3)))
+}
+#count unique values for each variable
+sapply(lapply(Abortions_all_03102023, unique), length)
+#fiting the positives to be 1 and negatives to be 0
+Abortions_all_03102023$rvfelisa_IgG_bin <- ifelse(Abortions_all_03102023$rvfelisa_IgG == "Positive", 1, 0)
+# fiting the final logistic regression model
+
+Abortions_all_03102023 <- Abortions_all_03102023 %>% mutate(host_rvf = factor(host_rvf,levels=c('Goats','Cattle','Sheep')))
+
+Abortion4 <- glm(rvfelisa_IgG_bin ~ host_rvf + stage_pregnancy + environmental_features + history_animal_movement, family = binomial, data = Abortions_all_03102023)
+summary(Abortion4)
+
+## Separating the date_alert (Target date 14 days)
+
+Abortions_all_03102023$date_alert <- as_datetime(Abortions_all_03102023$date_alert)
+
+cutoff_date <- ymd("2023-02-14") ## 14 days before the set up of call centre (1st March 2023)
+
+before_cutoff <- Abortions_all_03102023 %>% filter(date_alert < cutoff_date) ## Abortions earlier
+
+after_cutoff <- Abortions_all_03102023 %>% filter(date_alert >= cutoff_date) ## Abortions in the window period
+
+number_before <- nrow(before_cutoff)
+
+
+number_after <- nrow(after_cutoff)
+
+##Creating a new column in the dataset date_alert_new
+cutoff_date <- ymd("2023-02-14")
+Abortions_all_03102023 <- Abortions_all_03102023 %>%
+  mutate(date_alert_new = if_else(date_alert < cutoff_date, "Before 14th Feb 2023", "15th Feb 2023 Onwards"))
+
+## Getting a new dataset without Before 14th Feb 2023 data
+
+updated_Abortions_all_03102023 <- Abortions_all_03102023 %>%
+  filter(date_alert_new != "Before 14th Feb 2023")
+
+##Re-running the model just to see in case of any difference
+
+Abortion5 <- glm(rvfelisa_IgG_bin ~ host_rvf + stage_pregnancy + environmental_features + history_animal_movement, family = binomial, data = updated_Abortions_all_03102023)
+
+summary(Abortion5)
+```
+#Univariate model output for Brucellosis
+```{r}
+library(broom)
+library(dplyr)
+
+# Define predictor variables for the univariate model for RVF
+
+predictors <- c("host_brucellosis", "stage_pregnancy", "environmental_features", 
+                "history_animal_movement", "subcounty")
+
+# Initialize a list to store results
+brucellosis_univariate_results <- list()
+
+# Loop through each predictor to fit a univariate model and get standard errors and z-values
+for (predictor in predictors) {
+    # Fit the univariate model
+    formula <- as.formula(paste("brucellosis~" , predictor))
+    univ_model <- glm(formula, family = binomial, data = Abortions_all_03102023)
+    
+    univ_summary <- tidy(univ_model, conf.int = TRUE) %>%
+        select(term, estimate, std.error, statistic, p.value) %>%  # Select relevant columns
+        rename(z_value = statistic) %>%  # Renaming statistic to z_value
+        mutate(across(c(std.error, z_value, p.value), round, 3))  # Round to 3 decimal places
+    
+    univ_summary <- univ_summary %>%
+        mutate(Predictor = predictor)
+  
+    brucellosis_univariate_results[[predictor]] <- univ_summary
+}
+
+full_univariate_results <- bind_rows(univariate_results)
+
+full_univariate_results <- full_univariate_results %>%
+    select(Predictor, term, estimate, std.error, z_value, p.value)
+
+print(full_univariate_results, n = Inf)  # n = Inf ensures all rows are displayed
+
+```
+
+#Running the logistic regression model for Brucellosis
+```{r}
+# Updating the brucellosis column to 1 for "Positive" and 0 for "Negative"
+
+Abortions_all_03102023$brucellosis <- ifelse(Abortions_all_03102023$brucellosis == "Positive",1,0)
+
+#Fiting the logistic regression model
+
+Abortions_all_03102023 <- Abortions_all_03102023 %>%
+    mutate(host_rvf = relevel(factor(host_brucellosis), ref = "Goats"))
+
+model_brucellosis <- glm(brucellosis ~ host_brucellosis + stage_pregnancy + history_animal_movement, 
+                         family = binomial, data = Abortions_all_03102023)
+
+# Check the summary of the model
+summary(model_brucellosis)
+
+```
+
+```{r}
+#########################################################################################
+##Simplifying the tables in R and making the model outputs into a publishable version (Not presented in the final paper)
+install.packages("gtsummary")
+library(gtsummary)
+Abortion4  %>% 
+tbl_regression(exponentiate = TRUE) %>% 
+bold_p()
+########################################################################################
+,,,,{r}
+```
+```{r}
+######################################################################################
+##Timeliness of Abortions reporting (Fig 2 in the Manuscript)
+#Grouping number of abortions per day
+IgGresult <- abortions5 %>% select(date_alert,rvfelisa_IgG) %>% na.omit() %>% 
+  mutate(rvfelisa_num = if_else(rvfelisa_IgG == "Positive", 1, 0)) %>% 
+  group_by(date_alert) %>% 
+  summarise(number_reported = n())
+
+# Checking the dates in events are in IgGresult
+print(filter(IgGresult, !is.na(event)))
+ggplot(IgGresult, aes(x = date_alert, y = number_reported)) +
+  geom_line() +
+  geom_point() + 
+  geom_text(data = subset(IgGresult, !is.na(event)),
+            aes(label = event), nudge_y = 5) +  # Nudging the label upwards to avoid overlap
+  labs(title = "Number of RVF ELISA IgG Positive Cases Over Time", 
+       x = "Date", 
+       y = "Number Reported") +
+  theme_minimal()
++ ylim(0, max(IgGresult$number_reported) + 10)  # Adjusting the y-axis limits
+#####################################################################################
+```{r}
+#Understanding the duration difference between date_alert and date_sample collection (Appendix: Figure 2)
+
+# Rename the column to remove the extra space
+colnames(Abortions_all_03102023)[colnames(Abortions_all_03102023) == "date _samplecollection"] <- "date_samplecollection"
+
+# Convert the corrected column to Date format
+Abortions_all_03102023$date_samplecollection <- as.Date(Abortions_all_03102023$date_samplecollection, format = "%Y-%m-%d")
+Abortions_all_03102023$date_alert <- as.Date(Abortions_all_03102023$date_alert, format = "%Y-%m-%d")
+
+# Compute the difference in days
+Abortions_all_03102023$days_difference <- as.numeric(Abortions_all_03102023$date_samplecollection - Abortions_all_03102023$date_alert)
+
+# Compute the mean and standard deviation of the days difference
+average_difference <- mean(Abortions_all_03102023$days_difference, na.rm = TRUE)
+sd_difference <- sd(Abortions_all_03102023$days_difference, na.rm = TRUE)
+
+# Print the results
+print(paste("Mean:", average_difference))
+print(paste("Standard Deviation:", sd_difference))
+# Plotting the differences
+library(ggplot2)
+ggplot(Abortions_all_03102023, aes(x = days_difference)) +
+    geom_histogram(binwidth=1, fill="#FF8000", color="black", alpha=2.7) +
+    labs(title = "Distribution of days difference between date of alert and date of sample Collection (days)",
+         x = "Duration taken to respond to abortion alerts (days)",
+         y = "Number of livestock abortions followed up") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    coord_cartesian(xlim = c(0, 15))
+##########################################################################################
+```
+```{r}
+# Calculating the confidence intervals in our prevalence results (Table I)
+# Defining outcomes as a matrix or data frame where the first column is the number of successes and the second column is the total number of trials
+outcomes <- matrix(c(40, 106,
+                     13, 66,
+                     4, 12,
+                     2, 106,
+                     1, 12,
+                     20, 125,
+                     21, 58,
+                     9,106,
+                     1,66,
+                     3,12,
+                     0,66,
+                     0,16), ncol = 2, byrow = TRUE)
+
+# Column names for clarity
+colnames(outcomes) <- c("Successes", "Total")
+
+# Calculate confidence intervals for each set of outcomes
+ci_list <- apply(outcomes, 1, function(x) BinomCI(x[1], x[2]))
+print(ci_list)
+##############################################################################################
+```
+
